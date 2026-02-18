@@ -1,3 +1,13 @@
 @import './fonts.css';
 @import './tailwind.css';
 @import './theme.css';
+
+@layer utilities {
+  .glass {
+    @apply bg-white/80 backdrop-blur-[20px] dark:bg-black/80;
+  }
+  
+  .glass-panel {
+    @apply bg-white/70 backdrop-blur-xl border border-white/20 shadow-lg dark:bg-black/70 dark:border-white/10;
+  }
+}
