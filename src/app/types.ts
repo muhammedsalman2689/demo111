@@ -20,6 +20,7 @@ export interface Room {
   projectId: string;
   name: string;
   roomType: RoomType;
+  image?: string;
   createdAt: string;
 }
 
