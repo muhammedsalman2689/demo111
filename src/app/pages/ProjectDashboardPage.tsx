@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router";
-import { Plus, ChevronLeft, Home } from "lucide-react";
+import { Plus, ChevronLeft, Home, LogOut } from "lucide-react";
 import { useAppStore } from "../store";
 import { Room, RoomType } from "../types";
+import { useAuth } from "../context/AuthContext";
 
 export function ProjectDashboardPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
   const { getProject, getProjectRooms, addRoom } = useAppStore();
+  const { logout } = useAuth();
   const [showAddRoomModal, setShowAddRoomModal] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [roomType, setRoomType] = useState<RoomType>("Living Room");
@@ -54,18 +56,33 @@ export function ProjectDashboardPage() {
             </h1>
           </div>
           <button
-            onClick={() => setShowAddRoomModal(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0066cc] text-white rounded-full text-[14px] hover:bg-[#0077ed] transition-colors"
+            onClick={logout}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#f5f5f7] text-[#1d1d1f] rounded-full text-[14px] hover:bg-[#e8e8ed] transition-colors"
             style={{ fontFamily: "var(--font-text)" }}
           >
-            <Plus className="w-4 h-4" />
-            Add Room
+            <LogOut className="w-4 h-4" />
+            Logout
           </button>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-[980px] mx-auto px-5 md:px-8 py-20">
+        {/* Breadcrumb */}
+        <div
+          className="flex items-center gap-2 mb-8 text-[14px] text-[#86868b]"
+          style={{ fontFamily: "var(--font-text)" }}
+        >
+          <Link
+            to="/projects"
+            className="hover:text-[#0066cc] transition-colors"
+          >
+            Projects
+          </Link>
+          <span>/</span>
+          <span className="text-[#1d1d1f]">{project.name}</span>
+        </div>
+
         {/* Project Info */}
         <div className="mb-16">
           <h2
@@ -156,80 +173,6 @@ export function ProjectDashboardPage() {
           </div>
         </div>
       </main>
-
-      {/* Add Room Modal */}
-      {showAddRoomModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
-          <div className="bg-white rounded-[28px] max-w-[500px] w-full">
-            <div className="p-8">
-              <h2
-                className="text-[32px] tracking-[-0.022em] text-[#1d1d1f] mb-6"
-                style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-              >
-                Add Room
-              </h2>
-              <form onSubmit={handleAddRoom}>
-                <div className="space-y-5">
-                  <div>
-                    <label
-                      className="block text-[14px] text-[#1d1d1f] mb-2"
-                      style={{ fontFamily: "var(--font-text)" }}
-                    >
-                      Room Name
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={roomName}
-                      onChange={(e) => setRoomName(e.target.value)}
-                      className="w-full px-4 py-3 bg-[#f5f5f7] rounded-2xl border-0 text-[17px] text-[#1d1d1f] focus:bg-white focus:ring-2 focus:ring-[#0066cc] outline-none transition-all"
-                      style={{ fontFamily: "var(--font-text)" }}
-                      placeholder="e.g., Living Room"
-                    />
-                  </div>
-                  <div>
-                    <label
-                      className="block text-[14px] text-[#1d1d1f] mb-2"
-                      style={{ fontFamily: "var(--font-text)" }}
-                    >
-                      Room Type
-                    </label>
-                    <select
-                      value={roomType}
-                      onChange={(e) => setRoomType(e.target.value as RoomType)}
-                      className="w-full px-4 py-3 bg-[#f5f5f7] rounded-2xl border-0 text-[17px] text-[#1d1d1f] focus:bg-white focus:ring-2 focus:ring-[#0066cc] outline-none transition-all"
-                      style={{ fontFamily: "var(--font-text)" }}
-                    >
-                      <option value="Living Room">Living Room</option>
-                      <option value="Bedroom">Bedroom</option>
-                      <option value="Bathroom">Bathroom</option>
-                      <option value="Kitchen">Kitchen</option>
-                      <option value="Custom">Custom</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="flex gap-3 mt-8">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddRoomModal(false)}
-                    className="flex-1 px-6 py-3 bg-[#f5f5f7] text-[#1d1d1f] rounded-full text-[17px] hover:bg-[#e8e8ed] transition-colors"
-                    style={{ fontFamily: "var(--font-text)" }}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="flex-1 px-6 py-3 bg-[#0066cc] text-white rounded-full text-[17px] hover:bg-[#0077ed] transition-colors"
-                    style={{ fontFamily: "var(--font-text)" }}
-                  >
-                    Add Room
-                  </button>
-                </div>
-              </form>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

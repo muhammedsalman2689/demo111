@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { Link, useParams, useNavigate } from "react-router";
-import { Plus, ChevronLeft, Square, Camera } from "lucide-react";
+import { Plus, ChevronLeft, Square, Camera, LogOut } from "lucide-react";
 import { useAppStore } from "../store";
 import { Element, ElementType } from "../types";
+import { useAuth } from "../context/AuthContext";
 
 export function RoomPage() {
   const { projectId, roomId } = useParams();
   const navigate = useNavigate();
   const { getProject, rooms, getRoomElements, addElement } = useAppStore();
+  const { logout } = useAuth();
   const [showAddElementModal, setShowAddElementModal] = useState(false);
   const [elementName, setElementName] = useState("");
   const [elementType, setElementType] = useState<ElementType>("Window");
@@ -65,18 +67,39 @@ export function RoomPage() {
             </h1>
           </div>
           <button
-            onClick={() => setShowAddElementModal(true)}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#0066cc] text-white rounded-full text-[14px] hover:bg-[#0077ed] transition-colors"
+            onClick={logout}
+            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#f5f5f7] text-[#1d1d1f] rounded-full text-[14px] hover:bg-[#e8e8ed] transition-colors"
             style={{ fontFamily: "var(--font-text)" }}
           >
-            <Plus className="w-4 h-4" />
-            Add Element
+            <LogOut className="w-4 h-4" />
+            Logout
           </button>
         </div>
       </header>
 
       {/* Main Content */}
       <main className="max-w-[980px] mx-auto px-5 md:px-8 py-20">
+        {/* Breadcrumb */}
+        <div
+          className="flex items-center gap-2 mb-8 text-[14px] text-[#86868b]"
+          style={{ fontFamily: "var(--font-text)" }}
+        >
+          <Link
+            to="/projects"
+            className="hover:text-[#0066cc] transition-colors"
+          >
+            Projects
+          </Link>
+          <span>/</span>
+          <Link
+            to={`/project/${projectId}`}
+            className="hover:text-[#0066cc] transition-colors"
+          >
+            {project.name}
+          </Link>
+          <span>/</span>
+          <span className="text-[#1d1d1f]">{room.name}</span>
+        </div>
         {/* Room Info */}
         <div className="mb-16">
           <div className="inline-block px-3 py-1 bg-[#f5f5f7] rounded-full text-[12px] text-[#86868b] mb-4">
