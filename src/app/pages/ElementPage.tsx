@@ -129,7 +129,7 @@ export function ElementPage() {
                 className="text-[24px] tracking-[-0.022em] text-white mb-2"
                 style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
               >
-                Capture & Review
+                Measure
               </h4>
               <p
                 className="text-[17px] text-white/80 leading-[1.47]"

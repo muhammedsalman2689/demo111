@@ -1,22 +1,29 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
+import { loginApi } from "../../utils/apiEndpoints";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (email === "admin" && password === "admin123") {
-      const dummyToken = "neo-premium-token-" + Date.now();
-      login(dummyToken);
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await loginApi(email, password);
+      login(response.access_token);
       navigate("/projects");
-    } else {
-      setError("Invalid credentials");
+    } catch (err) {
+      setError("Invalid credentials or server error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -79,9 +86,10 @@ export default function LoginPage() {
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full py-3.5 bg-primary text-primary-foreground rounded-full font-medium hover:opacity-90 transition-opacity shadow-lg shadow-blue-500/20 active:scale-[0.98] transform duration-100"
+              disabled={loading}
+              className="w-full py-3.5 bg-primary text-primary-foreground rounded-full font-medium hover:opacity-90 transition-opacity shadow-lg shadow-blue-500/20 active:scale-[0.98] transform duration-100 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Sign In
+              {loading ? "Signing In..." : "Sign In"}
             </button>
           </div>
         </form>
@@ -92,10 +100,6 @@ export default function LoginPage() {
           </a>
         </div>
       </div>
-
-      <p className="fixed bottom-8 text-xs text-muted-foreground">
-        &copy; 2026 Measurement Web UI. Neo-Premium Design.
-      </p>
     </div>
   );
 }
