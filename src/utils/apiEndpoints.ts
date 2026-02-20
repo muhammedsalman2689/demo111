@@ -20,3 +20,82 @@ export const loginApi = async (username: string, password: string): Promise<Logi
   
   return response.data;
 };
+
+export interface ProjectResponse {
+  name: string;
+  customer_name: string;
+  customer_address: string;
+  customer_phone: string;
+  organization_id: number;
+  id: number;
+  created_by_id: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export const getProjectsApi = async (): Promise<ProjectResponse[]> => {
+  const response = await api.get<ProjectResponse[]>('/api/v1/projects/');
+  return response.data;
+};
+
+// Workaround for now if the specific project endpoint doesn't allow GET
+export const getProjectApi = async (id: string): Promise<ProjectResponse> => {
+  const projects = await getProjectsApi();
+  const project = projects.find((p) => p.id.toString() === id);
+  if (!project) throw new Error("Project not found");
+  return project;
+};
+
+export interface RoomResponse {
+  id: number;
+  project_id: number;
+  room_type_id: number;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const getRoomsApi = async (projectId: string): Promise<RoomResponse[]> => {
+  const response = await api.get<RoomResponse[]>(`/api/v1/rooms/?project_id=${projectId}`);
+  return response.data;
+};
+
+export interface RoomTypeResponse {
+  id: number;
+  name: string;
+}
+
+export const getRoomTypesApi = async (): Promise<RoomTypeResponse[]> => {
+  const response = await api.get<RoomTypeResponse[]>('/api/v1/rooms/room-types');
+  return response.data;
+};
+
+export const getRoomApi = async (roomId: string): Promise<RoomResponse> => {
+  const response = await api.get<RoomResponse>(`/api/v1/rooms/${roomId}`);
+  return response.data;
+};
+
+export interface ElementResponse {
+  id: number;
+  room_id: number;
+  name: string;
+  element_type: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// export const getElementsApi = async (roomId: string): Promise<ElementResponse[]> => {
+//   const response = await api.get<ElementResponse[]>(`/api/v1/elements/?room_id=${roomId}`);
+//   return response.data;
+// };
+
+export interface ElementTypeResponse {
+  id: number;
+  name: string;
+}
+
+export const getElementTypesApi = async (): Promise<ElementTypeResponse[]> => {
+  const response = await api.get<ElementTypeResponse[]>('/api/v1/elements/element-types');
+  return response.data;
+};
+

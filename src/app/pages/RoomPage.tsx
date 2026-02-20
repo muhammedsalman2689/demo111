@@ -1,25 +1,107 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router";
-import { Plus, ChevronLeft, Square, Camera, LogOut } from "lucide-react";
+import {
+  Plus,
+  ChevronLeft,
+  Square,
+  Camera,
+  LogOut,
+  Loader2,
+} from "lucide-react";
 import { useAppStore } from "../store";
-import { Element, ElementType } from "../types";
+import { Element, ElementType, Room, Project } from "../types";
 import { useAuth } from "../context/AuthContext";
+import {
+  getProjectApi,
+  getRoomApi,
+  getRoomTypesApi,
+} from "../../utils/apiEndpoints";
 
 export function RoomPage() {
   const { projectId, roomId } = useParams();
   const navigate = useNavigate();
-  const { getProject, rooms, getRoomElements, addElement } = useAppStore();
+  const {
+    getProject,
+    rooms,
+    getRoomElements,
+    addElement,
+    addProject,
+    addRoom,
+  } = useAppStore();
   const { logout } = useAuth();
   const [showAddElementModal, setShowAddElementModal] = useState(false);
   const [elementName, setElementName] = useState("");
   const [elementType, setElementType] = useState<ElementType>("Window");
+  const [loading, setLoading] = useState(true);
 
   const project = getProject(projectId!);
   const room = rooms.find((r) => r.id === roomId);
   const elements = getRoomElements(roomId!);
 
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!projectId || !roomId) return;
+
+      try {
+        setLoading(true);
+        // 1. Fetch Project if missing
+        if (!project) {
+          const projectData = await getProjectApi(projectId);
+          const mappedProject: Project = {
+            id: projectData.id.toString(),
+            name: projectData.name,
+            customerName: projectData.customer_name,
+            address: projectData.customer_address,
+            propertyType: "Apartment",
+            notes: "",
+            createdAt: projectData.created_at,
+            synced: true,
+          };
+          addProject(mappedProject);
+        }
+
+        // 2. Fetch Room and Types to ensure we have latest data and mapping
+        // Even if room exists in store, we might want to refresh it, or fetch if missing (page refresh)
+        const [roomData, roomTypesData] = await Promise.all([
+          getRoomApi(roomId),
+          getRoomTypesApi(),
+        ]);
+
+        const roomTypeMap = new Map(roomTypesData.map((t) => [t.id, t.name]));
+
+        const mappedRoom: Room = {
+          id: roomData.id.toString(),
+          projectId: roomData.project_id.toString(),
+          name: roomData.name,
+          roomType: (roomTypeMap.get(roomData.room_type_id) || "Custom") as any, // Cast to any/RoomType as needed
+          createdAt: roomData.created_at,
+          image: "",
+        };
+
+        // Update store - addRoom typically adds or updates (check store impl if needed, but safe to call)
+        addRoom(mappedRoom);
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [projectId, roomId, addProject, addRoom]); // Removed 'project' from dep array to avoid loops if object identity changes, or handle carefully.
+  // Actually keeping 'project' in deps might skip fetch if present, but inside useEffect we check !project.
+  // Better to just run once on mount or ID change.
+
+  if (loading && !room) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0066cc]" />
+      </div>
+    );
+  }
+
   if (!project || !room) {
-    return <div>Room not found</div>;
+    return <div>Room or Project not found</div>;
   }
 
   const handleAddElement = (e: React.FormEvent) => {

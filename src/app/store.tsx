@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, ReactNode } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  ReactNode,
+  useCallback,
+} from "react";
 import { Project, Room, Element, Frame, Measurement } from "./types";
 
 interface AppState {
@@ -10,6 +16,8 @@ interface AppState {
 }
 
 interface AppContextType extends AppState {
+  setProjects: (projects: Project[]) => void;
+  setRooms: (rooms: Room[]) => void;
   addProject: (project: Project) => void;
   addRoom: (room: Room) => void;
   addElement: (element: Element) => void;
@@ -24,7 +32,7 @@ interface AppContextType extends AppState {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Mock data
+// Mock data (kept same as before)
 const mockProjects: Project[] = [
   {
     id: "1",
@@ -166,37 +174,90 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [frames, setFrames] = useState<Frame[]>(mockFrames);
   const [measurements, setMeasurements] = useState<Measurement[]>([]);
 
-  const addProject = (project: Project) => {
-    setProjects([...projects, project]);
-  };
+  // Using useCallback and functional updates to ensuring stable identity
+  const addProject = useCallback((project: Project) => {
+    setProjects((prev) => {
+      const index = prev.findIndex((p) => p.id === project.id);
+      if (index >= 0) {
+        const newProjects = [...prev];
+        newProjects[index] = project;
+        return newProjects;
+      }
+      return [...prev, project];
+    });
+  }, []);
 
-  const addRoom = (room: Room) => {
-    setRooms([...rooms, room]);
-  };
+  const addRoom = useCallback((room: Room) => {
+    setRooms((prev) => {
+      const index = prev.findIndex((r) => r.id === room.id);
+      if (index >= 0) {
+        const newRooms = [...prev];
+        newRooms[index] = room;
+        return newRooms;
+      }
+      return [...prev, room];
+    });
+  }, []);
 
-  const addElement = (element: Element) => {
-    setElements([...elements, element]);
-  };
+  const addElement = useCallback((element: Element) => {
+    setElements((prev) => {
+      const index = prev.findIndex((e) => e.id === element.id);
+      if (index >= 0) {
+        const newElements = [...prev];
+        newElements[index] = element;
+        return newElements;
+      }
+      return [...prev, element];
+    });
+  }, []);
 
-  const addFrame = (frame: Frame) => {
-    setFrames([...frames, frame]);
-  };
+  const addFrame = useCallback((frame: Frame) => {
+    setFrames((prev) => {
+      const index = prev.findIndex((f) => f.id === frame.id);
+      if (index >= 0) {
+        const newFrames = [...prev];
+        newFrames[index] = frame;
+        return newFrames;
+      }
+      return [...prev, frame];
+    });
+  }, []);
 
-  const addMeasurement = (measurement: Measurement) => {
-    setMeasurements([...measurements, measurement]);
-  };
+  const addMeasurement = useCallback((measurement: Measurement) => {
+    setMeasurements((prev) => {
+      const index = prev.findIndex((m) => m.id === measurement.id);
+      if (index >= 0) {
+        const newMeasurements = [...prev];
+        newMeasurements[index] = measurement;
+        return newMeasurements;
+      }
+      return [...prev, measurement];
+    });
+  }, []);
 
-  const getProject = (id: string) => projects.find((p) => p.id === id);
+  // Getters depend on state so they still change when state changes.
+  // We can useCallback here too but they rely on state variables.
+  const getProject = useCallback(
+    (id: string) => projects.find((p) => p.id === id),
+    [projects],
+  );
 
-  const getProjectRooms = (projectId: string) =>
-    rooms.filter((r) => r.projectId === projectId);
+  const getProjectRooms = useCallback(
+    (projectId: string) => rooms.filter((r) => r.projectId === projectId),
+    [rooms],
+  );
 
-  const getRoomElements = (roomId: string) =>
-    elements.filter((e) => e.roomId === roomId);
+  const getRoomElements = useCallback(
+    (roomId: string) => elements.filter((e) => e.roomId === roomId),
+    [elements],
+  );
 
-  const getElement = (id: string) => elements.find((e) => e.id === id);
+  const getElement = useCallback(
+    (id: string) => elements.find((e) => e.id === id),
+    [elements],
+  );
 
-  const getElementFrames = (elementId: string) => frames;
+  const getElementFrames = useCallback((elementId: string) => frames, [frames]);
 
   return (
     <AppContext.Provider
@@ -206,6 +267,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         elements,
         frames,
         measurements,
+        setProjects,
+        setRooms,
         addProject,
         addRoom,
         addElement,

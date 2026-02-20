@@ -1,21 +1,108 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router";
-import { Plus, ChevronLeft, Home, LogOut } from "lucide-react";
+import { Plus, ChevronLeft, Home, LogOut, Loader2 } from "lucide-react";
 import { useAppStore } from "../store";
-import { Room, RoomType } from "../types";
+import { Room, RoomType, Project } from "../types";
 import { useAuth } from "../context/AuthContext";
+import {
+  getRoomsApi,
+  getProjectApi,
+  getRoomTypesApi, // Ensure getRoomTypesApi is imported
+  RoomTypeResponse, // Ensure RoomTypeResponse interface is imported
+} from "../../utils/apiEndpoints";
 
 export function ProjectDashboardPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { getProject, getProjectRooms, addRoom } = useAppStore();
+  const { getProject, getProjectRooms, addRoom, setRooms, addProject } =
+    useAppStore();
   const { logout } = useAuth();
   const [showAddRoomModal, setShowAddRoomModal] = useState(false);
   const [roomName, setRoomName] = useState("");
   const [roomType, setRoomType] = useState<RoomType>("Living Room");
+  const [roomTypes, setRoomTypes] = useState<RoomTypeResponse[]>([]);
+  const [roomsLoading, setRoomsLoading] = useState(true);
+  const [projectLoading, setProjectLoading] = useState(true);
 
   const project = getProject(projectId!);
   const rooms = getProjectRooms(projectId!);
+
+  // Fetch Project if not in store
+  useEffect(() => {
+    const fetchProject = async () => {
+      if (!projectId) return;
+
+      // If project is already in store, no need to fetch
+      if (project) {
+        setProjectLoading(false);
+        return;
+      }
+
+      try {
+        const data = await getProjectApi(projectId);
+        const mappedProject: Project = {
+          id: data.id.toString(),
+          name: data.name,
+          customerName: data.customer_name,
+          address: data.customer_address,
+          propertyType: "Apartment", // TODO: Map based on data or assume default
+          notes: "",
+          createdAt: data.created_at,
+          synced: true,
+        };
+        addProject(mappedProject);
+      } catch (error) {
+        console.error("Failed to fetch project:", error);
+      } finally {
+        setProjectLoading(false);
+      }
+    };
+
+    fetchProject();
+  }, [projectId, project, addProject]);
+
+  // Fetch Rooms and Types
+  useEffect(() => {
+    const fetchRoomsAndTypes = async () => {
+      if (!projectId) return;
+      try {
+        const [roomsData, roomTypesData] = await Promise.all([
+          getRoomsApi(projectId),
+          getRoomTypesApi(),
+        ]);
+
+        setRoomTypes(roomTypesData);
+        const roomTypesMap = new Map(
+          roomTypesData.map((type) => [type.id, type.name]),
+        );
+
+        // Map API response to Room interface
+        const mappedRooms: Room[] = roomsData.map((r) => ({
+          id: r.id.toString(),
+          projectId: r.project_id.toString(),
+          name: r.name,
+          roomType: (roomTypesMap.get(r.room_type_id) || "Custom") as RoomType,
+          createdAt: r.created_at,
+          image: "", // API doesn't seem to return image yet, using placeholder logic in UI
+        }));
+        setRooms(mappedRooms);
+      } catch (error) {
+        console.error("Failed to fetch rooms or types:", error);
+      } finally {
+        setRoomsLoading(false);
+      }
+    };
+
+    fetchRoomsAndTypes();
+  }, [projectId, setRooms]);
+
+  if (projectLoading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0066cc]" />
+      </div>
+    );
+  }
 
   if (!project) {
     return <div>Project not found</div>;
@@ -112,65 +199,81 @@ export function ProjectDashboardPage() {
 
         {/* Rooms Section */}
         <div>
-          <h3
-            className="text-[28px] tracking-[-0.022em] text-[#1d1d1f] mb-8"
-            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-          >
-            Rooms
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {rooms.map((room) => (
-              <Link
-                key={room.id}
-                to={`/project/${projectId}/room/${room.id}`}
-                className="group block bg-[#f5f5f7] rounded-[28px] overflow-hidden hover:bg-[#e8e8ed] transition-all duration-300 relative"
-              >
-                {/* Image Background or Thumbnail */}
-                <div className="aspect-video w-full bg-gray-200 relative overflow-hidden">
-                  {room.image ? (
-                    <img
-                      src={room.image}
-                      alt={room.name}
-                      className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                      <Home className="w-8 h-8 text-black/20" />
-                    </div>
-                  )}
+          {roomTypes.map((type) => {
+            const projectRooms = rooms.filter((r) => r.roomType === type.name);
+            if (projectRooms.length === 0) return null;
 
-                  {/* Gradient Overlay for Text Visibility if needed, or keeping text below */}
-                </div>
-
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-2">
-                    <h4
-                      className="text-[21px] tracking-[-0.022em] text-[#1d1d1f]"
-                      style={{
-                        fontFamily: "var(--font-display)",
-                        fontWeight: 600,
-                      }}
+            return (
+              <div key={type.id} className="mb-12">
+                <h3
+                  className="text-[28px] tracking-[-0.022em] text-[#1d1d1f] mb-8"
+                  style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
+                >
+                  {type.name}
+                </h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {projectRooms.map((room) => (
+                    <Link
+                      key={room.id}
+                      to={`/project/${projectId}/room/${room.id}`}
+                      className="group block bg-[#f5f5f7] rounded-[28px] overflow-hidden hover:bg-[#e8e8ed] transition-all duration-300 relative"
                     >
-                      {room.name}
-                    </h4>
-                    {/* Icon as a small badge if image is present */}
-                    {!room.image && (
-                      <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center">
-                        <Home className="w-4 h-4 text-[#1d1d1f]" />
+                      {/* Image Background or Thumbnail */}
+                      <div className="aspect-video w-full bg-gray-200 relative overflow-hidden">
+                        {room.image ? (
+                          <img
+                            src={room.image}
+                            alt={room.name}
+                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                            <Home className="w-8 h-8 text-black/20" />
+                          </div>
+                        )}
                       </div>
-                    )}
-                  </div>
 
-                  <p
-                    className="text-[15px] text-[#86868b]"
-                    style={{ fontFamily: "var(--font-text)" }}
-                  >
-                    {room.roomType}
-                  </p>
+                      <div className="p-6">
+                        <div className="flex items-center justify-between mb-2">
+                          <h4
+                            className="text-[21px] tracking-[-0.022em] text-[#1d1d1f]"
+                            style={{
+                              fontFamily: "var(--font-display)",
+                              fontWeight: 600,
+                            }}
+                          >
+                            {room.name}
+                          </h4>
+                          {/* Icon as a small badge if image is present */}
+                          {!room.image && (
+                            <div className="w-8 h-8 rounded-full bg-white flex items-center justify-center">
+                              <Home className="w-4 h-4 text-[#1d1d1f]" />
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between mt-1">
+                          <span
+                            className="text-[13px] text-[#86868b]"
+                            style={{ fontFamily: "var(--font-text)" }}
+                          >
+                            {new Date(room.createdAt).toLocaleDateString(
+                              "en-US",
+                              {
+                                month: "short",
+                                day: "numeric",
+                                year: "numeric",
+                              },
+                            )}
+                          </span>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
                 </div>
-              </Link>
-            ))}
-          </div>
+              </div>
+            );
+          })}
         </div>
       </main>
     </div>

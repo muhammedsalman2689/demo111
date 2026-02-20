@@ -1,7 +1,23 @@
 import axios from 'axios';
 
 const api = axios.create({
-  baseURL: '', // Use relative path to leverage Vite proxy
+  baseURL: import.meta.env.VITE_API_URL,
 });
+
+// Request interceptor
+api.interceptors.request.use(
+  (config) => {
+    // Grab the token from localStorage
+    const token = localStorage.getItem('access_token');
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export default api;

@@ -1,14 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "react-router";
 import { Plus, Home, Check, RefreshCw, LogOut } from "lucide-react";
 import { useAppStore } from "../store";
 import { Project, PropertyType } from "../types";
 import { useAuth } from "../context/AuthContext";
+import { getProjectsApi } from "../../utils/apiEndpoints";
 
 export function MyProjectsPage() {
-  const { projects, addProject } = useAppStore();
+  const { projects, addProject, setProjects } = useAppStore();
   const { logout } = useAuth(); // Destructure logout from AuthContext
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({
     name: "",
     customerName: "",
@@ -16,6 +18,32 @@ export function MyProjectsPage() {
     propertyType: "Villa" as PropertyType,
     notes: "",
   });
+
+  useEffect(() => {
+    const fetchProjects = async () => {
+      try {
+        const data = await getProjectsApi();
+        // Map API response to Project interface
+        const mappedProjects: Project[] = data.map((p) => ({
+          id: p.id.toString(),
+          name: p.name,
+          customerName: p.customer_name,
+          address: p.customer_address,
+          propertyType: "Apartment", // Default or map if available
+          notes: "",
+          createdAt: p.created_at,
+          synced: true,
+        }));
+        setProjects(mappedProjects);
+      } catch (error) {
+        console.error("Failed to fetch projects:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProjects();
+  }, [setProjects]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,8 +171,20 @@ export function MyProjectsPage() {
                 >
                   {project.address}
                 </p>
-                <div className="mt-4 inline-block px-3 py-1 bg-white rounded-full text-[12px] text-[#1d1d1f]">
-                  {project.propertyType}
+                <div className="mt-4 flex items-center justify-between">
+                  <div className="inline-block px-3 py-1 bg-white rounded-full text-[12px] text-[#1d1d1f]">
+                    {project.propertyType}
+                  </div>
+                  <span
+                    className="text-[14px] text-[#86868b]"
+                    style={{ fontFamily: "var(--font-text)" }}
+                  >
+                    {new Date(project.createdAt).toLocaleDateString("en-US", {
+                      month: "long",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
+                  </span>
                 </div>
               </div>
             </Link>
