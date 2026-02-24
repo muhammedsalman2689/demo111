@@ -1,12 +1,11 @@
 import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router";
 import {
-  Plus,
   ChevronLeft,
   Square,
-  Camera,
   LogOut,
   Loader2,
+  Trash2,
 } from "lucide-react";
 import { useAppStore } from "../store";
 import { Element, ElementType, Room, Project } from "../types";
@@ -15,6 +14,11 @@ import {
   getProjectApi,
   getRoomApi,
   getRoomTypesApi,
+  deleteElementApi,
+  getElementsApi,
+  getElementTypesApi,
+  ElementResponse,
+  ElementTypeResponse,
 } from "../../utils/apiEndpoints";
 
 export function RoomPage() {
@@ -25,6 +29,7 @@ export function RoomPage() {
     rooms,
     getRoomElements,
     addElement,
+    removeElement,
     addProject,
     addRoom,
   } = useAppStore();
@@ -33,6 +38,8 @@ export function RoomPage() {
   const [elementName, setElementName] = useState("");
   const [elementType, setElementType] = useState<ElementType>("Window");
   const [loading, setLoading] = useState(true);
+  const [apiElements, setApiElements] = useState<ElementResponse[]>([]);
+  const [elementTypes, setElementTypes] = useState<ElementTypeResponse[]>([]);
 
   const project = getProject(projectId!);
   const room = rooms.find((r) => r.id === roomId);
@@ -62,9 +69,11 @@ export function RoomPage() {
 
         // 2. Fetch Room and Types to ensure we have latest data and mapping
         // Even if room exists in store, we might want to refresh it, or fetch if missing (page refresh)
-        const [roomData, roomTypesData] = await Promise.all([
+        const [roomData, roomTypesData, elementsData, elementTypesData] = await Promise.all([
           getRoomApi(roomId),
           getRoomTypesApi(),
+          getElementsApi(roomId),
+          getElementTypesApi(),
         ]);
 
         const roomTypeMap = new Map(roomTypesData.map((t) => [t.id, t.name]));
@@ -80,6 +89,10 @@ export function RoomPage() {
 
         // Update store - addRoom typically adds or updates (check store impl if needed, but safe to call)
         addRoom(mappedRoom);
+        
+        // Store elements and element types
+        setApiElements(elementsData);
+        setElementTypes(elementTypesData);
       } catch (error) {
         console.error("Failed to fetch data:", error);
       } finally {
@@ -120,13 +133,37 @@ export function RoomPage() {
     setElementType("Window");
   };
 
-  // Count elements by type
-  const elementCounts = elements.reduce(
+  const handleDeleteElement = async (e: React.MouseEvent, elementId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this element?")) {
+      try {
+        await deleteElementApi(elementId);
+        removeElement(elementId);
+        // Refresh elements list
+        const elementsData = await getElementsApi(roomId!);
+        setApiElements(elementsData);
+      } catch (error) {
+        console.error("Failed to delete element:", error);
+        alert("Failed to delete element. Please try again.");
+      }
+    }
+  };
+
+  // Create element type map for quick lookup
+  const elementTypeMap = new Map(elementTypes.map((t) => [t.id, t.name]));
+
+  // Group elements by element type using element_type_id
+  const elementsByType = apiElements.reduce(
     (acc, el) => {
-      acc[el.elementType] = (acc[el.elementType] || 0) + 1;
+      const typeName = elementTypeMap.get(el.element_type_id) || "Unknown";
+      if (!acc[typeName]) {
+        acc[typeName] = [];
+      }
+      acc[typeName].push(el);
       return acc;
     },
-    {} as Record<string, number>,
+    {} as Record<string, ElementResponse[]>,
   );
 
   return (
@@ -209,12 +246,15 @@ export function RoomPage() {
           >
             Elements
           </h3>
-          <div className="space-y-4">
-            {Object.entries(elementCounts).map(([type, count]) => {
-              const typeElements = elements.filter(
-                (el) => el.elementType === type,
-              );
-              return (
+          {Object.keys(elementsByType).length === 0 ? (
+            <div className="text-center py-12 text-[#86868b]">
+              <p className="text-[17px]" style={{ fontFamily: "var(--font-text)" }}>
+                No elements found. Add your first element to get started.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {Object.entries(elementsByType).map(([type, typeElements]) => (
                 <div
                   key={type}
                   className="bg-[#f5f5f7] rounded-[28px] overflow-hidden"
@@ -228,7 +268,7 @@ export function RoomPage() {
                           fontWeight: 600,
                         }}
                       >
-                        {type} ({count})
+                        {type} ({typeElements.length})
                       </h4>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -236,25 +276,24 @@ export function RoomPage() {
                         <Link
                           key={element.id}
                           to={`/project/${projectId}/room/${roomId}/element/${element.id}`}
-                          className="block bg-white rounded-2xl p-3 hover:bg-[#fafafa] transition-colors group"
+                          className="block bg-white rounded-2xl p-3 hover:bg-[#fafafa] transition-colors group relative"
                         >
+                          <button
+                            onClick={(e) => handleDeleteElement(e, element.id.toString())}
+                            className="absolute top-2 right-2 w-7 h-7 rounded-full bg-[#f5f5f7] hover:bg-red-50 flex items-center justify-center transition-colors group/delete z-10"
+                            aria-label="Delete element"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-[#86868b] group-hover/delete:text-red-500" />
+                          </button>
                           <div className="flex items-center gap-4">
                             {/* Element Thumbnail */}
                             <div className="w-16 h-16 rounded-xl bg-[#f5f5f7] overflow-hidden flex-shrink-0 relative">
-                              {element.images && element.images.length > 0 ? (
-                                <img
-                                  src={element.images[0]}
-                                  alt={element.name}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full flex items-center justify-center">
-                                  <Square className="w-6 h-6 text-black/20" />
-                                </div>
-                              )}
+                              <div className="w-full h-full flex items-center justify-center">
+                                <Square className="w-6 h-6 text-black/20" />
+                              </div>
                             </div>
 
-                            <div className="flex-1 min-w-0">
+                            <div className="flex-1 min-w-0 pr-8">
                               <p
                                 className="text-[17px] text-[#1d1d1f] font-medium truncate"
                                 style={{ fontFamily: "var(--font-text)" }}
@@ -262,15 +301,8 @@ export function RoomPage() {
                                 {element.name}
                               </p>
                               <div className="flex items-center gap-2 mt-0.5">
-                                {element.images.length > 0 && (
-                                  <span className="inline-flex items-center gap-1 text-[13px] text-[#86868b]">
-                                    <Camera className="w-3 h-3" />
-                                    {element.images.length}
-                                  </span>
-                                )}
                                 <span className="text-[13px] text-[#86868b]">
-                                  {/* Add measurement count if valid, placeholder for now */}
-                                  {/* 0 measurements */}
+                                  {new Date(element.created_at).toLocaleDateString()}
                                 </span>
                               </div>
                             </div>
@@ -282,9 +314,9 @@ export function RoomPage() {
                     </div>
                   </div>
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </main>
 

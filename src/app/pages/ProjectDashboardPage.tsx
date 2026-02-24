@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useParams, useNavigate } from "react-router";
-import { Plus, ChevronLeft, Home, LogOut, Loader2 } from "lucide-react";
+import { Plus, ChevronLeft, Home, LogOut, Loader2, Trash2 } from "lucide-react";
 import { useAppStore } from "../store";
 import { Room, RoomType, Project } from "../types";
 import { useAuth } from "../context/AuthContext";
@@ -9,12 +9,13 @@ import {
   getProjectApi,
   getRoomTypesApi, // Ensure getRoomTypesApi is imported
   RoomTypeResponse, // Ensure RoomTypeResponse interface is imported
+  deleteRoomApi,
 } from "../../utils/apiEndpoints";
 
 export function ProjectDashboardPage() {
   const { projectId } = useParams();
   const navigate = useNavigate();
-  const { getProject, getProjectRooms, addRoom, setRooms, addProject } =
+  const { getProject, getProjectRooms, addRoom, setRooms, addProject, removeRoom } =
     useAppStore();
   const { logout } = useAuth();
   const [showAddRoomModal, setShowAddRoomModal] = useState(false);
@@ -123,6 +124,20 @@ export function ProjectDashboardPage() {
     setRoomType("Living Room");
   };
 
+  const handleDeleteRoom = async (e: React.MouseEvent, roomId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (window.confirm("Are you sure you want to delete this room?")) {
+      try {
+        await deleteRoomApi(roomId);
+        removeRoom(roomId);
+      } catch (error) {
+        console.error("Failed to delete room:", error);
+        alert("Failed to delete room. Please try again.");
+      }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-white">
       {/* Header */}
@@ -216,21 +231,30 @@ export function ProjectDashboardPage() {
                     <Link
                       key={room.id}
                       to={`/project/${projectId}/room/${room.id}`}
-                      className="group block bg-[#f5f5f7] rounded-[28px] overflow-hidden hover:bg-[#e8e8ed] transition-all duration-300 relative"
+                      className="group block bg-[#f5f5f7] rounded-[28px] overflow-hidden hover:bg-[#e8e8ed] transition-all duration-300"
                     >
-                      {/* Image Background or Thumbnail */}
-                      <div className="aspect-video w-full bg-gray-200 relative overflow-hidden">
-                        {room.image ? (
-                          <img
-                            src={room.image}
-                            alt={room.name}
-                            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                          />
-                        ) : (
-                          <div className="w-full h-full flex items-center justify-center bg-gray-100">
-                            <Home className="w-8 h-8 text-black/20" />
-                          </div>
-                        )}
+                      <div className="relative">
+                        <button
+                          onClick={(e) => handleDeleteRoom(e, room.id)}
+                          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white hover:bg-red-50 flex items-center justify-center transition-colors group/delete z-10"
+                          aria-label="Delete room"
+                        >
+                          <Trash2 className="w-4 h-4 text-[#86868b] group-hover/delete:text-red-500" />
+                        </button>
+                        {/* Image Background or Thumbnail */}
+                        <div className="aspect-video w-full bg-gray-200 relative overflow-hidden">
+                          {room.image ? (
+                            <img
+                              src={room.image}
+                              alt={room.name}
+                              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center bg-gray-100">
+                              <Home className="w-8 h-8 text-black/20" />
+                            </div>
+                          )}
+                        </div>
                       </div>
 
                       <div className="p-6">

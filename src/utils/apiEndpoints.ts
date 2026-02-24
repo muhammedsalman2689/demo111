@@ -33,8 +33,8 @@ export interface ProjectResponse {
   updated_at: string;
 }
 
-export const getProjectsApi = async (): Promise<ProjectResponse[]> => {
-  const response = await api.get<ProjectResponse[]>('/api/v1/projects/');
+export const getProjectsApi = async () => {
+  const response = await api.get('/api/v1/projects/');
   return response.data;
 };
 
@@ -79,15 +79,20 @@ export interface ElementResponse {
   id: number;
   room_id: number;
   name: string;
-  element_type: string;
+  element_type_id: number;
   created_at: string;
   updated_at: string;
 }
 
-// export const getElementsApi = async (roomId: string): Promise<ElementResponse[]> => {
-//   const response = await api.get<ElementResponse[]>(`/api/v1/elements/?room_id=${roomId}`);
-//   return response.data;
-// };
+export const getElementsApi = async (roomId: string): Promise<ElementResponse[]> => {
+  const response = await api.get<ElementResponse[]>(`/api/v1/elements/?room_id=${roomId}`);
+  return response.data;
+};
+
+export const getElementApi = async (elementId: string): Promise<ElementResponse> => {
+  const response = await api.get<ElementResponse>(`/api/v1/elements/${elementId}`);
+  return response.data;
+};
 
 export interface ElementTypeResponse {
   id: number;
@@ -97,5 +102,17 @@ export interface ElementTypeResponse {
 export const getElementTypesApi = async (): Promise<ElementTypeResponse[]> => {
   const response = await api.get<ElementTypeResponse[]>('/api/v1/elements/element-types');
   return response.data;
+};
+    //project delete api call//
+export const deleteProjectApi = async (projectId: string): Promise<void> => {
+  await api.delete(`/api/v1/projects/${projectId}`);
+};
+
+export const deleteRoomApi = async (roomId: string): Promise<void> => {
+  await api.delete(`/api/v1/rooms/${roomId}`);
+};
+
+export const deleteElementApi = async (elementId: string): Promise<void> => {
+  await api.delete(`/api/v1/elements/${elementId}`);
 };
 
