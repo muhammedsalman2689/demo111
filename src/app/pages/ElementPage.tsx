@@ -1,16 +1,18 @@
-
+import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router";
 import {
   ChevronLeft,
-  Camera,
-  Video,
-  FileText,
   Ruler,
+  Video,
+  Trash2,
+  Edit2,
   LogOut,
+  Loader2,
 } from "lucide-react";
 
 import { useAppStore } from "../store";
 import { useAuth } from "../context/AuthContext";
+import { getElementApi, ElementResponse } from "../../utils/apiEndpoints";
 
 export function ElementPage() {
   const { projectId, roomId, elementId } = useParams();
@@ -18,13 +20,57 @@ export function ElementPage() {
   const { getElement, rooms, getProject } = useAppStore();
   const { logout } = useAuth();
 
+  const [isSold, setIsSold] = useState(false);
+  const [comment, setComment] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [apiElement, setApiElement] = useState<ElementResponse | null>(null);
+
   const element = getElement(elementId!);
   const room = rooms.find((r) => r.id === roomId);
   const project = getProject(projectId!);
 
-  if (!element || !room || !project) {
+  useEffect(() => {
+    const fetchElement = async () => {
+      if (!elementId) return;
+
+      try {
+        setLoading(true);
+        const elementData = await getElementApi(elementId);
+        setApiElement(elementData);
+      } catch (error) {
+        console.error("Failed to fetch element:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchElement();
+  }, [elementId]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-white flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-[#0066cc]" />
+      </div>
+    );
+  }
+
+  if (!element || !room || !project || !apiElement) {
     return <div>Element not found</div>;
   }
+
+  const handleDelete = () => {
+    if (window.confirm("Are you sure you want to delete this element?")) {
+      console.log("Delete element");
+      navigate(`/project/${projectId}/room/${roomId}`);
+    }
+  };
+
+  const handleInsideScan = () => {
+    navigate(
+      `/project/${projectId}/room/${roomId}/element/${elementId}/measure`
+    );
+  };
 
   return (
     <div className="min-h-screen bg-white">
@@ -42,17 +88,26 @@ export function ElementPage() {
               className="text-[17px] tracking-[-0.022em] text-[#1d1d1f]"
               style={{ fontFamily: "var(--font-display)" }}
             >
-              {element.name}
+              {apiElement.name}
             </h1>
           </div>
-          <button
-            onClick={logout}
-            className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#f5f5f7] text-[#1d1d1f] rounded-full text-[14px] hover:bg-[#e8e8ed] transition-colors"
-            style={{ fontFamily: "var(--font-text)" }}
-          >
-            <LogOut className="w-4 h-4" />
-            Logout
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDelete}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#f5f5f7] text-[#1d1d1f] rounded-full text-[14px] hover:bg-red-50 hover:text-red-500 transition-colors"
+              style={{ fontFamily: "var(--font-text)" }}
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+            <button
+              onClick={logout}
+              className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-[#f5f5f7] text-[#1d1d1f] rounded-full text-[14px] hover:bg-[#e8e8ed] transition-colors"
+              style={{ fontFamily: "var(--font-text)" }}
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </button>
+          </div>
         </div>
       </header>
 
@@ -84,144 +139,123 @@ export function ElementPage() {
             {room.name}
           </Link>
           <span>/</span>
-          <span className="text-[#1d1d1f]">{element.name}</span>
+          <span className="text-[#1d1d1f]">{apiElement.name}</span>
         </div>
 
-        {/* Element Info */}
+        {/* Element Title Section */}
         <div className="mb-16">
-          <h2
-            className="text-[48px] md:text-[56px] tracking-[-0.022em] text-[#1d1d1f] mb-4"
-            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-          >
-            {element.name}
-          </h2>
-          <p
-            className="text-[19px] text-[#86868b] mb-8"
-            style={{ fontFamily: "var(--font-text)" }}
-          >
-            {element.elementType}
-          </p>
-          <div className="inline-block px-4 py-2 bg-[#f5f5f7] rounded-2xl">
-            <span className="text-[14px] text-[#86868b]">Status: </span>
-            <span className="text-[14px] text-[#1d1d1f]">
-              {element.images.length > 0 ? "Media Captured" : "No Media"}
-            </span>
+          <div className="inline-block px-3 py-1 bg-[#34C759] rounded-full text-[12px] text-white mb-4">
+            Open
+          </div>
+          <div className="flex items-center gap-3 mb-6">
+            <h2
+              className="text-[48px] md:text-[56px] tracking-[-0.022em] text-[#1d1d1f]"
+              style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
+            >
+              {apiElement.name}
+            </h2>
+            <button className="w-10 h-10 rounded-full bg-[#f5f5f7] hover:bg-[#e8e8ed] flex items-center justify-center transition-colors">
+              <Edit2 className="w-5 h-5 text-[#1d1d1f]" />
+            </button>
+          </div>
+
+          {/* Toggle Buttons */}
+          <div className="flex gap-3">
+            <button
+              onClick={() => setIsSold(false)}
+              className={`px-6 py-2.5 rounded-xl text-[14px] font-semibold transition-colors ${
+                !isSold
+                  ? "bg-[#86868b] text-white"
+                  : "bg-[#f5f5f7] text-[#86868b]"
+              }`}
+              style={{ fontFamily: "var(--font-text)" }}
+            >
+              NOT
+            </button>
+            <button
+              onClick={() => setIsSold(true)}
+              className={`px-6 py-2.5 rounded-xl text-[14px] font-semibold transition-colors ${
+                isSold
+                  ? "bg-[#86868b] text-white"
+                  : "bg-[#f5f5f7] text-[#86868b]"
+              }`}
+              style={{ fontFamily: "var(--font-text)" }}
+            >
+              SOLD
+            </button>
           </div>
         </div>
 
-        {/* Actions */}
+        {/* Scans Section */}
+        <div className="mb-16">
+          <h3
+            className="text-[28px] tracking-[-0.022em] text-[#1d1d1f] mb-8"
+            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
+          >
+            Scans
+          </h3>
+          <button
+            // onClick={handleInsideScan}
+            className="w-full bg-white rounded-[28px] p-12 hover:bg-[#fafafa] transition-colors border border-black/5 shadow-sm"
+          >
+            <div className="flex flex-col items-center">
+              <div className="w-16 h-16 rounded-2xl bg-[#f5f5f7] flex items-center justify-center mb-4">
+                <Video className="w-8 h-8 text-[#1d1d1f]" />
+              </div>
+              <p
+                className="text-[17px] text-[#1d1d1f] font-semibold"
+                style={{ fontFamily: "var(--font-text)" }}
+              >
+                Show video
+              </p>
+            </div>
+          </button>
+        </div>
+
+        {/* Photos Section */}
+        <div className="mb-16">
+          <h3
+            className="text-[28px] tracking-[-0.022em] text-[#1d1d1f] mb-8"
+            style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
+          >
+            Measurements
+          </h3>
+          <button
+            onClick={() => navigate(`/project/${projectId}/room/${roomId}/element/${elementId}/measure`)}
+            className="w-full bg-white rounded-[28px] p-12 hover:bg-[#fafafa] transition-colors border border-black/5 shadow-sm"
+          >
+            <div className="flex flex-col items-center">
+              <div className="relative w-16 h-16 rounded-full bg-[#f5f5f7] flex items-center justify-center mb-4">
+                <Ruler className="w-8 h-8 text-[#1d1d1f]" />
+              </div>
+              <p
+                className="text-[17px] text-[#1d1d1f] font-semibold"
+                style={{ fontFamily: "var(--font-text)" }}
+              >
+                Start Measurement
+              </p>
+            </div>
+          </button>
+        </div>
+
+        {/* Comments Section */}
         <div>
           <h3
             className="text-[28px] tracking-[-0.022em] text-[#1d1d1f] mb-8"
             style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
           >
-            Actions
+            Comments
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Capture & Review - Primary Action */}
-            <Link
-              to={`/project/${projectId}/room/${roomId}/element/${elementId}/capture`}
-              className="block bg-[#0066cc] rounded-[28px] p-8 hover:bg-[#0077ed] transition-all duration-300 group"
-            >
-              <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center mb-4">
-                <Ruler className="w-7 h-7 text-white" />
-              </div>
-              <h4
-                className="text-[24px] tracking-[-0.022em] text-white mb-2"
-                style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-              >
-                Measure
-              </h4>
-              <p
-                className="text-[17px] text-white/80 leading-[1.47]"
-                style={{ fontFamily: "var(--font-text)" }}
-              >
-                View frames and perform precise measurements
-              </p>
-            </Link>
-
-            {/* Other Actions */}
-            <button className="block bg-[#f5f5f7] rounded-[28px] p-8 hover:bg-[#e8e8ed] transition-all duration-300 text-left">
-              <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center mb-4">
-                <Video className="w-7 h-7 text-[#1d1d1f]" />
-              </div>
-              <h4
-                className="text-[24px] tracking-[-0.022em] text-[#1d1d1f] mb-2"
-                style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-              >
-                Capture Video
-              </h4>
-              <p
-                className="text-[17px] text-[#86868b] leading-[1.47]"
-                style={{ fontFamily: "var(--font-text)" }}
-              >
-                Record video for measurement
-              </p>
-            </button>
-
-            <button className="block bg-[#f5f5f7] rounded-[28px] p-8 hover:bg-[#e8e8ed] transition-all duration-300 text-left">
-              <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center mb-4">
-                <Camera className="w-7 h-7 text-[#1d1d1f]" />
-              </div>
-              <h4
-                className="text-[24px] tracking-[-0.022em] text-[#1d1d1f] mb-2"
-                style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-              >
-                Capture Images
-              </h4>
-              <p
-                className="text-[17px] text-[#86868b] leading-[1.47]"
-                style={{ fontFamily: "var(--font-text)" }}
-              >
-                Take reference photos
-              </p>
-            </button>
-
-            <button className="block bg-[#f5f5f7] rounded-[28px] p-8 hover:bg-[#e8e8ed] transition-all duration-300 text-left">
-              <div className="w-14 h-14 rounded-2xl bg-white flex items-center justify-center mb-4">
-                <FileText className="w-7 h-7 text-[#1d1d1f]" />
-              </div>
-              <h4
-                className="text-[24px] tracking-[-0.022em] text-[#1d1d1f] mb-2"
-                style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-              >
-                Add Notes
-              </h4>
-              <p
-                className="text-[17px] text-[#86868b] leading-[1.47]"
-                style={{ fontFamily: "var(--font-text)" }}
-              >
-                Document observations
-              </p>
-            </button>
+          <div className="bg-white rounded-[28px] border border-black/5 shadow-sm overflow-hidden">
+            <textarea
+              value={comment}
+              onChange={(e) => setComment(e.target.value)}
+              placeholder="Add comments..."
+              className="w-full p-6 text-[17px] text-[#1d1d1f] placeholder:text-[#86868b] resize-none focus:outline-none min-h-[150px]"
+              style={{ fontFamily: "var(--font-text)" }}
+            />
           </div>
         </div>
-
-        {/* Media Gallery */}
-        {element.images.length > 0 && (
-          <div className="mt-20">
-            <h3
-              className="text-[28px] tracking-[-0.022em] text-[#1d1d1f] mb-8"
-              style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
-            >
-              Captured Media
-            </h3>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {element.images.map((img, index) => (
-                <div
-                  key={index}
-                  className="aspect-square rounded-2xl overflow-hidden bg-[#f5f5f7]"
-                >
-                  <img
-                    src={img}
-                    alt={`${element.name} ${index + 1}`}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
       </main>
     </div>
   );

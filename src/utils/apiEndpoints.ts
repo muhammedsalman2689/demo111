@@ -84,6 +84,11 @@ export interface ElementResponse {
   updated_at: string;
 }
 
+export interface ElementDetailResponse extends ElementResponse {
+  keyframes?: string[];
+  has_reconstruction?: boolean;
+}
+
 export const getElementsApi = async (roomId: string): Promise<ElementResponse[]> => {
   const response = await api.get<ElementResponse[]>(`/api/v1/elements/?room_id=${roomId}`);
   return response.data;
@@ -91,6 +96,11 @@ export const getElementsApi = async (roomId: string): Promise<ElementResponse[]>
 
 export const getElementApi = async (elementId: string): Promise<ElementResponse> => {
   const response = await api.get<ElementResponse>(`/api/v1/elements/${elementId}`);
+  return response.data;
+};
+
+export const getElementDetailApi = async (elementId: string): Promise<ElementDetailResponse> => {
+  const response = await api.get<ElementDetailResponse>(`/api/v1/elements/${elementId}`);
   return response.data;
 };
 
@@ -116,3 +126,48 @@ export const deleteElementApi = async (elementId: string): Promise<void> => {
   await api.delete(`/api/v1/elements/${elementId}`);
 };
 
+
+export interface MeasurementPointData {
+  image_name: string;
+  uv: [number, number];
+  enabled: boolean;
+}
+
+export interface MeasurementRequest {
+  run_id: string;
+  point_a: MeasurementPointData[];
+  point_b: MeasurementPointData[];
+}
+
+export interface MeasurementResponse {
+  distance_mm: number;
+  distance_in: number;
+  proj_a: Record<string, { x: number; y: number }>;
+  proj_b: Record<string, { x: number; y: number }>;
+  keyframes?: string[];
+}
+
+export const measureApi = async (data: MeasurementRequest): Promise<MeasurementResponse> => {
+  console.log('measureApi called with data:', data);
+  // Try different endpoint paths if getting 404
+  const response = await api.post<MeasurementResponse>('/api/v1/measurements/measure', data);
+  console.log('measureApi raw response:', response);
+  return response.data;
+};
+
+export interface MeasurementRunResponse {
+  id: number;
+  element_id: number;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export const getMeasurementRunApi = async (runId: string): Promise<MeasurementRunResponse> => {
+  const response = await api.get<MeasurementRunResponse>(`/api/v1/measurements/runs/${runId}`);
+  return response.data;
+};
+
+export const getMeasurementRunImageApi = (runId: string, imageName: string): string => {
+  return `${api.defaults.baseURL}/api/v1/measurements/runs/${runId}/images/${imageName}`;
+};

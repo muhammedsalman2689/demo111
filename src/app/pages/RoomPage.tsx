@@ -90,6 +90,22 @@ export function RoomPage() {
         // Update store - addRoom typically adds or updates (check store impl if needed, but safe to call)
         addRoom(mappedRoom);
         
+        // Create element type map for mapping element_type_id to type name
+        const elementTypeMap = new Map(elementTypesData.map((t) => [t.id, t.name]));
+        
+        // Map and add elements to store
+        elementsData.forEach((el) => {
+          const mappedElement: Element = {
+            id: el.id.toString(),
+            roomId: el.room_id.toString(),
+            name: el.name,
+            elementType: (elementTypeMap.get(el.element_type_id) || "Custom") as any,
+            images: [],
+            createdAt: el.created_at,
+          };
+          addElement(mappedElement);
+        });
+        
         // Store elements and element types
         setApiElements(elementsData);
         setElementTypes(elementTypesData);
@@ -101,9 +117,7 @@ export function RoomPage() {
     };
 
     fetchData();
-  }, [projectId, roomId, addProject, addRoom]); // Removed 'project' from dep array to avoid loops if object identity changes, or handle carefully.
-  // Actually keeping 'project' in deps might skip fetch if present, but inside useEffect we check !project.
-  // Better to just run once on mount or ID change.
+  }, [projectId, roomId, addProject, addRoom, addElement]);
 
   if (loading && !room) {
     return (
