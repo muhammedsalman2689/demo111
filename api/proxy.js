@@ -1,3 +1,10 @@
+// Disable body parsing to handle raw request body
+export const config = {
+  api: {
+    bodyParser: false,
+  },
+}
+
 export default async function handler(req, res) {
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -12,14 +19,16 @@ export default async function handler(req, res) {
   
   console.log('Proxying request to:', apiUrl);
   console.log('Method:', req.method);
-  console.log('Headers:', req.headers);
+  console.log('Content-Type:', req.headers['content-type']);
   
   try {
-    const headers = {
-      'Content-Type': req.headers['content-type'] || 'application/json',
-    };
+    const headers = {};
     
-    // Forward authorization header if present
+    // Forward important headers
+    if (req.headers['content-type']) {
+      headers['Content-Type'] = req.headers['content-type'];
+    }
+    
     if (req.headers.authorization) {
       headers.Authorization = req.headers.authorization;
     }
@@ -29,12 +38,26 @@ export default async function handler(req, res) {
       headers,
     };
 
-    // Add body for non-GET requests
-    if (req.method !== 'GET' && req.method !== 'HEAD' && req.body) {
-      fetchOptions.body = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
+    // Handle request body for non-GET requests
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      // Get raw body as buffer
+      const chunks = [];
+      for await (const chunk of req) {
+        chunks.push(chunk);
+      }
+      const body = Buffer.concat(chunks);
+      
+      if (body.length > 0) {
+        fetchOptions.body = body;
+        console.log('Body length:', body.length);
+        console.log('Body as string:', body.toString());
+      }
     }
 
+    console.log('Making request to:', apiUrl);
     const response = await fetch(apiUrl, fetchOptions);
+    
+    console.log('Response status:', response.status);
     
     // Set CORS headers
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -45,9 +68,11 @@ export default async function handler(req, res) {
     
     if (contentType && contentType.includes('application/json')) {
       const data = await response.json();
+      console.log('Response data:', data);
       return res.status(response.status).json(data);
     } else {
       const data = await response.text();
+      console.log('Response text:', data);
       return res.status(response.status).send(data);
     }
   } catch (error) {
