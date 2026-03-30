@@ -4,6 +4,7 @@ import { ProjectDashboardPage } from "./pages/ProjectDashboardPage";
 import { RoomPage } from "./pages/RoomPage";
 import { ElementPage } from "./pages/ElementPage";
 import { CapturePage } from "./pages/CapturePage";
+import { MeasurementPage } from "./pages/MeasurementPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import LoginPage from "./pages/LoginPage";
 import { useAuth } from "./context/AuthContext";
@@ -78,6 +79,10 @@ export const router = createBrowserRouter([
       {
         path: "/project/:projectId/room/:roomId/element/:elementId",
         Component: ElementPage,
+      },
+      {
+        path: "/project/:projectId/room/:roomId/element/:elementId/measure",
+        Component: MeasurementPage,
       },
       {
         path: "/project/:projectId/room/:roomId/element/:elementId/capture",

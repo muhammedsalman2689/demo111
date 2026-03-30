@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+   import React, { useState } from "react";
 import { useNavigate } from "react-router";
 import { useAuth } from "../context/AuthContext";
 import { loginApi } from "../../utils/apiEndpoints";
@@ -35,7 +35,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[400px] glass-panel rounded-[2rem] p-8 md:p-12 relative z-10 flex flex-col items-center animate-in fade-in zoom-in duration-500 slide-in-from-bottom-8">
         <div className="mb-8 text-center space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight text-foreground">
-            Welcome Back
+            Welcome 
           </h1>
           <p className="text-muted-foreground text-sm">
             Enter your credentials to access the workspace.

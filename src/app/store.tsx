@@ -19,8 +19,11 @@ interface AppContextType extends AppState {
   setProjects: (projects: Project[]) => void;
   setRooms: (rooms: Room[]) => void;
   addProject: (project: Project) => void;
+  removeProject: (projectId: string) => void;
   addRoom: (room: Room) => void;
+  removeRoom: (roomId: string) => void;
   addElement: (element: Element) => void;
+  removeElement: (elementId: string) => void;
   addFrame: (frame: Frame) => void;
   addMeasurement: (measurement: Measurement) => void;
   getProject: (id: string) => Project | undefined;
@@ -187,6 +190,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const removeProject = useCallback((projectId: string) => {
+    setProjects((prev) => prev.filter((p) => p.id !== projectId));
+  }, []);
+
   const addRoom = useCallback((room: Room) => {
     setRooms((prev) => {
       const index = prev.findIndex((r) => r.id === room.id);
@@ -199,6 +206,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const removeRoom = useCallback((roomId: string) => {
+    setRooms((prev) => prev.filter((r) => r.id !== roomId));
+  }, []);
+
   const addElement = useCallback((element: Element) => {
     setElements((prev) => {
       const index = prev.findIndex((e) => e.id === element.id);
@@ -209,6 +220,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, element];
     });
+  }, []);
+
+  const removeElement = useCallback((elementId: string) => {
+    setElements((prev) => prev.filter((e) => e.id !== elementId));
   }, []);
 
   const addFrame = useCallback((frame: Frame) => {
@@ -270,8 +285,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setProjects,
         setRooms,
         addProject,
+        removeProject,
         addRoom,
+        removeRoom,
         addElement,
+        removeElement,
         addFrame,
         addMeasurement,
         getProject,
