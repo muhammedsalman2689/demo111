@@ -12,7 +12,7 @@ import {
 
 import { useAppStore } from "../store";
 import { useAuth } from "../context/AuthContext";
-import { getElementApi, ElementResponse } from "../../utils/apiEndpoints";
+import { getElementApi, ElementResponse, getRoomApi, RoomResponse, getProjectApi, ProjectResponse } from "../../utils/apiEndpoints";
 
 export function ElementPage() {
   const { projectId, roomId, elementId } = useParams();
@@ -24,39 +24,43 @@ export function ElementPage() {
   const [comment, setComment] = useState("");
   const [loading, setLoading] = useState(true);
   const [apiElement, setApiElement] = useState<ElementResponse | null>(null);
+  const [apiRoom, setApiRoom] = useState<RoomResponse | null>(null);
+  const [apiProject, setApiProject] = useState<ProjectResponse | null>(null);
 
   const element = getElement(elementId!);
   const room = rooms.find((r) => r.id === roomId);
   const project = getProject(projectId!);
 
   useEffect(() => {
-    const fetchElement = async () => {
-      if (!elementId) return;
+    const fetchData = async () => {
+      if (!elementId || !roomId || !projectId) return;
 
       try {
         setLoading(true);
-        const elementData = await getElementApi(elementId);
+        const [elementData, roomData, projectData] = await Promise.all([
+          getElementApi(elementId),
+          getRoomApi(roomId),
+          getProjectApi(projectId),
+        ]);
         setApiElement(elementData);
+        setApiRoom(roomData);
+        setApiProject(projectData);
       } catch (error) {
-        console.error("Failed to fetch element:", error);
+        console.error("Failed to fetch data:", error);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchElement();
-  }, [elementId]);
+    fetchData();
+  }, [elementId, roomId, projectId]);
 
-  if (loading) {
+  if (loading || !apiElement || !apiRoom || !apiProject) {
     return (
       <div className="min-h-screen bg-white flex items-center justify-center">
         <Loader2 className="w-8 h-8 animate-spin text-[#0066cc]" />
       </div>
     );
-  }
-
-  if (!element || !room || !project || !apiElement) {
-    return <div>Element not found</div>;
   }
 
   const handleDelete = () => {
@@ -129,14 +133,14 @@ export function ElementPage() {
             to={`/project/${projectId}`}
             className="hover:text-[#0066cc] transition-colors"
           >
-            {project.name}
+            {apiProject.name}
           </Link>
           <span>/</span>
           <Link
             to={`/project/${projectId}/room/${roomId}`}
             className="hover:text-[#0066cc] transition-colors"
           >
-            {room.name}
+            {apiRoom.name}
           </Link>
           <span>/</span>
           <span className="text-[#1d1d1f]">{apiElement.name}</span>
@@ -206,7 +210,7 @@ export function ElementPage() {
                 className="text-[17px] text-[#1d1d1f] font-semibold"
                 style={{ fontFamily: "var(--font-text)" }}
               >
-                Show video
+                {/* Show video */}
               </p>
             </div>
           </button>
@@ -218,7 +222,7 @@ export function ElementPage() {
             className="text-[28px] tracking-[-0.022em] text-[#1d1d1f] mb-8"
             style={{ fontFamily: "var(--font-display)", fontWeight: 600 }}
           >
-            Measurements
+            Measurement images
           </h3>
           <button
             onClick={() => navigate(`/project/${projectId}/room/${roomId}/element/${elementId}/measure`)}
@@ -232,7 +236,7 @@ export function ElementPage() {
                 className="text-[17px] text-[#1d1d1f] font-semibold"
                 style={{ fontFamily: "var(--font-text)" }}
               >
-                Start Measurement
+                {/* Start Measurement */}
               </p>
             </div>
           </button>
